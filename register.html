@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registro - Chatbot Gemini</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-color: #4a6fa5;
+        --secondary-color: #166088;
+        --accent-color: #4fc3f7;
+        --error-color: #f44336;
+        --success-color: #4caf50;
+        --text-color: #333;
+        --light-text: #777;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        margin: 0;
+        padding: 20px;
+        color: var(--text-color);
+      }
+
+      .auth-container {
+        width: 100%;
+        max-width: 400px;
+        background-color: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        padding: 30px;
+      }
+
+      .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .auth-header h1 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+      }
+
+      .auth-header p {
+        color: var(--light-text);
+      }
+
+      .auth-form .form-group {
+        margin-bottom: 20px;
+      }
+
+      .auth-form label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .auth-form input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+      }
+
+      .auth-form input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.2);
+        outline: none;
+      }
+
+      .auth-form button {
+        width: 100%;
+        padding: 12px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
+      }
+
+      .auth-form button:hover {
+        background-color: var(--secondary-color);
+      }
+
+      .auth-footer {
+        text-align: center;
+        margin-top: 20px;
+        color: var(--light-text);
+      }
+
+      .auth-footer a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .auth-footer a:hover {
+        text-decoration: underline;
+      }
+
+      .error-message {
+        color: var(--error-color);
+        font-size: 0.9rem;
+        margin-top: 5px;
+        display: none;
+      }
+
+      .success-message {
+        color: var(--success-color);
+        font-size: 0.9rem;
+        margin-top: 5px;
+        display: none;
+      }
+
+      .password-container {
+        position: relative;
+      }
+
+      .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--light-text);
+      }
+
+      .password-strength {
+        height: 4px;
+        background-color: #eee;
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+
+      .strength-meter {
+        height: 100%;
+        width: 0;
+        transition: width 0.3s;
+      }
+
+      /* Dark mode styles */
+      .dark-mode {
+        background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%);
+        color: #f0f0f0;
+      }
+
+      .dark-mode .auth-container {
+        background-color: #2d3748;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .dark-mode .auth-header h1 {
+        color: #4fc3f7;
+      }
+
+      .dark-mode .auth-header p {
+        color: #a0aec0;
+      }
+
+      .dark-mode .auth-form input {
+        background-color: #4a5568;
+        border-color: #4a5568;
+        color: #f7fafc;
+      }
+
+      .dark-mode .auth-form input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.3);
+      }
+
+      .dark-mode .auth-footer {
+        color: #a0aec0;
+      }
+
+      .dark-mode .auth-footer a {
+        color: #4fc3f7;
+      }
+
+      .dark-mode .password-toggle {
+        color: #a0aec0;
+      }
+
+      .dark-mode .password-strength {
+        background-color: #4a5568;
+      }
+
+      .theme-toggle {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.1);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-color);
+      }
+
+      .dark-mode .theme-toggle {
+        color: #f7fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <button class="theme-toggle" id="theme-toggle">
+      <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="auth-container">
+      <div class="auth-header">
+        <h1>Crear Cuenta</h1>
+        <p>Regístrate para usar el Chatbot Gemini</p>
+      </div>
+
+      <form class="auth-form" id="register-form">
+        <div class="form-group">
+          <label for="username">Nombre de usuario</label>
+          <input type="text" id="username" name="username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <div class="password-container">
+            <input type="password" id="password" name="password" required />
+            <i class="fas fa-eye password-toggle" id="toggle-password"></i>
+          </div>
+          <div class="password-strength">
+            <div class="strength-meter" id="strength-meter"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-password">Confirmar contraseña</label>
+          <div class="password-container">
+            <input
+              type="password"
+              id="confirm-password"
+              name="confirm-password"
+              required
+            />
+            <i
+              class="fas fa-eye password-toggle"
+              id="toggle-confirm-password"
+            ></i>
+          </div>
+        </div>
+
+        <div class="error-message" id="error-message"></div>
+        <div class="success-message" id="success-message"></div>
+
+        <button type="submit">Registrarse</button>
+      </form>
+
+      <div class="auth-footer">
+        ¿Ya tienes una cuenta? <a href="login.html">Inicia sesión aquí</a>
+      </div>
+    </div>
+
+    <script>
+      // Estado de la aplicación
+      const appState = {
+        darkMode: localStorage.getItem("darkMode") === "true",
+      };
+
+      // Elementos del DOM
+      const DOM = {
+        registerForm: document.getElementById("register-form"),
+        usernameInput: document.getElementById("username"),
+        emailInput: document.getElementById("email"),
+        passwordInput: document.getElementById("password"),
+        confirmPasswordInput: document.getElementById("confirm-password"),
+        togglePassword: document.getElementById("toggle-password"),
+        toggleConfirmPassword: document.getElementById(
+          "toggle-confirm-password"
+        ),
+        errorMessage: document.getElementById("error-message"),
+        successMessage: document.getElementById("success-message"),
+        strengthMeter: document.getElementById("strength-meter"),
+        themeToggle: document.getElementById("theme-toggle"),
+      };
+
+      // Inicialización de la aplicación
+      function initApp() {
+        // Cargar preferencias
+        if (appState.darkMode) {
+          document.body.classList.add("dark-mode");
+          DOM.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+
+        setupEventListeners();
+      }
+
+      // Configurar event listeners
+      function setupEventListeners() {
+        // Mostrar/ocultar contraseña
+        DOM.togglePassword.addEventListener("click", () =>
+          togglePasswordVisibility(DOM.passwordInput, DOM.togglePassword)
+        );
+        DOM.toggleConfirmPassword.addEventListener("click", () =>
+          togglePasswordVisibility(
+            DOM.confirmPasswordInput,
+            DOM.toggleConfirmPassword
+          )
+        );
+
+        // Validar fortaleza de contraseña
+        DOM.passwordInput.addEventListener("input", checkPasswordStrength);
+
+        // Envío del formulario
+        DOM.registerForm.addEventListener("submit", handleRegistration);
+
+        // Cambiar tema
+        DOM.themeToggle.addEventListener("click", toggleTheme);
+      }
+
+      // Alternar visibilidad de contraseña
+      function togglePasswordVisibility(inputElement, toggleElement) {
+        const isPassword = inputElement.type === "password";
+        inputElement.type = isPassword ? "text" : "password";
+        toggleElement.classList.toggle("fa-eye");
+        toggleElement.classList.toggle("fa-eye-slash");
+      }
+
+      // Verificar fortaleza de contraseña
+      function checkPasswordStrength() {
+        const password = DOM.passwordInput.value;
+        let strength = 0;
+
+        // Longitud mínima
+        if (password.length >= 8) strength += 1;
+
+        // Contiene números
+        if (/\d/.test(password)) strength += 1;
+
+        // Contiene mayúsculas
+        if (/[A-Z]/.test(password)) strength += 1;
+
+        // Contiene caracteres especiales
+        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+        // Actualizar medidor visual
+        const width = strength * 25;
+        DOM.strengthMeter.style.width = `${width}%`;
+
+        // Cambiar color según fortaleza
+        if (strength <= 1) {
+          DOM.strengthMeter.style.backgroundColor = "var(--error-color)";
+        } else if (strength <= 3) {
+          DOM.strengthMeter.style.backgroundColor = "orange";
+        } else {
+          DOM.strengthMeter.style.backgroundColor = "var(--success-color)";
+        }
+      }
+
+      // Manejar registro
+      function handleRegistration(e) {
+        e.preventDefault();
+
+        const username = DOM.usernameInput.value.trim();
+        const email = DOM.emailInput.value.trim();
+        const password = DOM.passwordInput.value;
+        const confirmPassword = DOM.confirmPasswordInput.value;
+
+        // Validar campos
+        if (!username || !email || !password || !confirmPassword) {
+          showError("Por favor completa todos los campos");
+          return;
+        }
+
+        // Validar email
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showError("Por favor ingresa un correo electrónico válido");
+          return;
+        }
+
+        // Validar contraseña
+        if (password.length < 8) {
+          showError("La contraseña debe tener al menos 8 caracteres");
+          return;
+        }
+
+        // Validar coincidencia de contraseñas
+        if (password !== confirmPassword) {
+          showError("Las contraseñas no coinciden");
+          return;
+        }
+
+        // Obtener usuarios registrados
+        const users = JSON.parse(localStorage.getItem("chatUsers") || "[]");
+
+        // Verificar si el usuario ya existe
+        const userExists = users.some(
+          (u) => u.username === username || u.email === email
+        );
+
+        if (userExists) {
+          showError(
+            "El nombre de usuario o correo electrónico ya está registrado"
+          );
+        } else {
+          // Registrar nuevo usuario
+          users.push({
+            username,
+            email,
+            password,
+            createdAt: new Date().toISOString(),
+          });
+
+          localStorage.setItem("chatUsers", JSON.stringify(users));
+
+          // Mostrar mensaje de éxito
+          DOM.successMessage.textContent = "¡Registro exitoso! Redirigiendo...";
+          DOM.successMessage.style.display = "block";
+          DOM.errorMessage.style.display = "none";
+
+          // Redirigir a login después de 2 segundos
+          setTimeout(() => {
+            window.location.href = "login.html";
+          }, 2000);
+        }
+      }
+
+      // Mostrar mensaje de error
+      function showError(message) {
+        DOM.errorMessage.textContent = message;
+        DOM.errorMessage.style.display = "block";
+        DOM.successMessage.style.display = "none";
+
+        setTimeout(() => {
+          DOM.errorMessage.style.display = "none";
+        }, 5000);
+      }
+
+      // Alternar tema oscuro/claro
+      function toggleTheme() {
+        appState.darkMode = !appState.darkMode;
+        document.body.classList.toggle("dark-mode");
+        localStorage.setItem("darkMode", appState.darkMode);
+
+        if (appState.darkMode) {
+          DOM.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+          DOM.themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+      }
+
+      // Redirigir si ya está autenticado
+      function checkAuth() {
+        if (localStorage.getItem("currentUser")) {
+          window.location.href = "chat.html";
+        }
+      }
+
+      // Inicializar la aplicación
+      checkAuth();
+      initApp();
+    </script>
+  </body>
+</html>
