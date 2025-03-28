@@ -390,6 +390,38 @@
         display: none !important;
       }
 
+      /* Nuevos estilos para los botones de cuenta */
+      .account-actions {
+        display: flex;
+        flex-direction: column;
+        margin-top: 20px;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+      }
+
+      .account-btn {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .account-btn:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .dark-mode .account-btn {
+        color: white !important;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 768px) {
         .chat-container {
@@ -562,6 +594,23 @@
           <label for="enable-history">Guardar historial:</label>
           <input type="checkbox" id="enable-history" checked />
         </div>
+
+        <div class="account-actions">
+          <button
+            id="logout-btn"
+            class="account-btn"
+            style="background-color: #f44336; color: white"
+          >
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+          </button>
+          <button
+            id="delete-account-btn"
+            class="account-btn"
+            style="background-color: #ff9800; color: white; margin-top: 10px"
+          >
+            <i class="fas fa-trash-alt"></i> Borrar cuenta
+          </button>
+        </div>
       </div>
 
       <div id="chat-box" class="chat-box">
@@ -650,10 +699,20 @@
         temperatureValue: document.getElementById("temperature-value"),
         maxTokens: document.getElementById("max-tokens"),
         enableHistory: document.getElementById("enable-history"),
+        logoutBtn: document.getElementById("logout-btn"),
+        deleteAccountBtn: document.getElementById("delete-account-btn"),
       };
+
+      // Verificar autenticación al cargar
+      function checkAuth() {
+        if (!localStorage.getItem("currentUser")) {
+          window.location.href = "index.html";
+        }
+      }
 
       // Inicialización de la aplicación
       function initApp() {
+        checkAuth();
         loadSettings();
         setupEventListeners();
         updateUI();
@@ -733,6 +792,53 @@
           appState.settings.enableHistory = e.target.checked;
           saveSettings();
         });
+
+        // Cerrar sesión
+        DOM.logoutBtn.addEventListener("click", logoutUser);
+
+        // Borrar cuenta
+        DOM.deleteAccountBtn.addEventListener("click", deleteAccount);
+      }
+
+      // Función para cerrar sesión
+      function logoutUser() {
+        if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
+          localStorage.removeItem("currentUser");
+          window.location.href = "index.html";
+        }
+      }
+
+      // Función para borrar cuenta
+      function deleteAccount() {
+        if (
+          confirm(
+            "¿Estás seguro de que quieres borrar tu cuenta? Esta acción no se puede deshacer."
+          )
+        ) {
+          const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+
+          if (currentUser) {
+            // Obtener todos los usuarios
+            const users = JSON.parse(localStorage.getItem("chatUsers") || []);
+
+            // Filtrar el usuario actual
+            const updatedUsers = users.filter(
+              (user) => user.username !== currentUser.username
+            );
+
+            // Guardar los usuarios actualizados
+            localStorage.setItem("chatUsers", JSON.stringify(updatedUsers));
+
+            // Eliminar el usuario actual
+            localStorage.removeItem("currentUser");
+
+            // Mostrar mensaje y redirigir
+            showStatusIndicator("Cuenta eliminada correctamente", "success");
+            setTimeout(() => {
+              window.location.href = "index.html";
+            }, 2000);
+          }
+        }
       }
 
       // Actualizar la interfaz según el estado
