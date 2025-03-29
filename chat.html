@@ -144,6 +144,12 @@
         animation-delay: 0.2s;
       }
 
+      /* Estilo específico para mensajes en streaming */
+      .bot.streaming {
+        background-color: #e8e8e8; /* Slightly lighter background */
+        opacity: 0.8; /* Semi-transparent to indicate it's in progress */
+      }
+
       .system {
         align-self: center;
         background-color: var(--accent-color);
@@ -160,6 +166,7 @@
         color: var(--light-text);
         margin-top: 5px;
         text-align: right;
+        display: none; /* Oculto por defecto, se muestra al final del streaming */
       }
 
       .message-options {
@@ -168,10 +175,23 @@
         right: 5px;
         opacity: 0;
         transition: opacity 0.2s;
+        display: none; /* Oculto por defecto, se muestra al final del streaming */
       }
 
       .message:hover .message-options {
         opacity: 1;
+      }
+      /* Asegurarnos que las opciones solo aparezcan al final */
+      .message:not(.streaming-finished):hover .message-options {
+        opacity: 0;
+      }
+      .message.streaming-finished:hover .message-options,
+      .message.streaming-finished .message-time {
+        display: block; /* O flex si es necesario */
+        opacity: 1;
+      }
+      .message.streaming-finished .message-time {
+        display: block; /* Asegura que el tiempo se muestre */
       }
 
       .option-btn {
@@ -250,6 +270,10 @@
         outline: none;
         font-size: 1rem;
         transition: all 0.3s;
+        resize: none; /* Para evitar que el usuario redimensione si usamos textarea */
+        min-height: 45px; /* Altura mínima igual al botón */
+        max-height: 150px; /* Limitar expansión */
+        overflow-y: auto; /* Scroll si excede max-height */
       }
 
       .user-input:focus {
@@ -270,6 +294,7 @@
         align-items: center;
         justify-content: center;
         transition: all 0.2s;
+        align-self: flex-end; /* Alinear con la parte inferior del textarea si crece */
       }
 
       .send-btn:hover {
@@ -279,6 +304,16 @@
 
       .send-btn i {
         font-size: 1.2rem;
+      }
+
+      .send-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .user-input:disabled {
+        background-color: #f8f8f8;
+        cursor: not-allowed;
       }
 
       .status-indicator {
@@ -291,7 +326,9 @@
         padding: 8px 15px;
         border-radius: 20px;
         font-size: 0.9rem;
-        display: none;
+        display: none; /* Cambiado a flex al mostrar */
+        align-items: center;
+        gap: 5px;
         z-index: 1000;
       }
 
@@ -383,7 +420,7 @@
       }
 
       .message-content {
-        white-space: pre-wrap;
+        white-space: pre-wrap; /* Importante para respetar saltos de línea y espacios */
       }
 
       .hidden {
@@ -418,8 +455,15 @@
         transform: translateY(-2px);
       }
 
+      .account-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
       .dark-mode .account-btn {
-        color: white !important;
+        background-color: #4a5568; /* Darker background */
+        color: #f7fafc; /* Light text for contrast */
       }
 
       /* Responsive adjustments */
@@ -474,6 +518,14 @@
         color: #f7fafc;
       }
 
+      /* --- Dark Mode Typing Indicator --- */
+      .dark-mode .typing-indicator {
+        background-color: #4a5568;
+      }
+      .dark-mode .typing-dot {
+        background-color: #a0aec0;
+      }
+
       .dark-mode .input-container {
         background-color: #2d3748;
         border-top: 1px solid #4a5568;
@@ -490,6 +542,10 @@
         box-shadow: 0 0 0 3px rgba(79, 195, 247, 0.3);
       }
 
+      .dark-mode .user-input:disabled {
+        background-color: #3a4150;
+      }
+
       .dark-mode .send-btn {
         background-color: #1e40af;
       }
@@ -498,8 +554,13 @@
         background-color: #1e3a8a;
       }
 
+      .dark-mode .send-btn:disabled {
+        background-color: #5a667a;
+      }
+
       .dark-mode .option-btn {
         color: #ccc;
+        background: rgba(255, 255, 255, 0.1);
       }
 
       .dark-mode .option-btn:hover {
@@ -524,6 +585,25 @@
       .dark-mode .model-btn.active {
         background-color: #1e40af;
       }
+
+      .dark-mode .settings-panel h3 {
+        color: var(--accent-color);
+      }
+      .dark-mode .settings-close {
+        color: #a0aec0;
+      }
+      .dark-mode .message-time {
+        color: #a0aec0;
+      }
+
+      .dark-mode .account-btn {
+        /* Ajustar colores si es necesario, o dejarlos como están si los colores base funcionan */
+        /* Ejemplo: Podrías querer que el color del texto sea más claro si el fondo es oscuro */
+        color: white;
+      }
+      .dark-mode .account-actions {
+        border-top-color: #4a5568;
+      }
     </style>
     <link
       rel="stylesheet"
@@ -535,36 +615,67 @@
       <div class="chat-header">
         <div class="chat-title">Chatbot con Gemini</div>
         <div class="chat-actions">
-          <button class="action-btn" id="dark-mode-btn" title="Modo oscuro">
+          <button
+            class="action-btn"
+            id="dark-mode-btn"
+            title="Modo oscuro"
+            aria-label="Cambiar tema"
+          >
             <i class="fas fa-moon"></i>
           </button>
-          <button class="action-btn" id="settings-btn" title="Configuración">
+          <button
+            class="action-btn"
+            id="settings-btn"
+            title="Configuración"
+            aria-label="Abrir configuración"
+          >
             <i class="fas fa-cog"></i>
           </button>
-          <button class="action-btn" id="clear-chat-btn" title="Limpiar chat">
+          <button
+            class="action-btn"
+            id="clear-chat-btn"
+            title="Limpiar chat"
+            aria-label="Limpiar chat"
+          >
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>
 
       <div class="model-selector">
-        <button class="model-btn active" data-model="gemini-1.5-pro-latest">
+        <button
+          class="model-btn active"
+          data-model="gemini-1.5-pro-latest"
+          aria-pressed="true"
+        >
           Gemini 1.5 Pro
         </button>
-        <button class="model-btn" data-model="gemini-1.0-pro">
+        <button
+          class="model-btn"
+          data-model="gemini-1.0-pro"
+          aria-pressed="false"
+        >
           Gemini 1.0 Pro
         </button>
-        <button class="model-btn" data-model="gemini-1.5-flash">
+        <button
+          class="model-btn"
+          data-model="gemini-1.5-flash"
+          aria-pressed="false"
+        >
           Gemini 1.5 Flash
         </button>
       </div>
 
-      <div class="model-info" id="model-info">
+      <div class="model-info" id="model-info" role="tooltip" aria-hidden="true">
         Modelo actual: Gemini 1.5 Pro (última versión)
       </div>
 
-      <div class="settings-panel" id="settings-panel">
-        <button class="settings-close" id="settings-close">
+      <div class="settings-panel" id="settings-panel" aria-hidden="true">
+        <button
+          class="settings-close"
+          id="settings-close"
+          aria-label="Cerrar configuración"
+        >
           <i class="fas fa-times"></i>
         </button>
         <h3>Configuración del Chatbot</h3>
@@ -577,8 +688,9 @@
             max="1"
             step="0.1"
             value="0.9"
+            aria-describedby="temperature-value"
           />
-          <span id="temperature-value">0.9</span>
+          <span id="temperature-value" aria-live="polite">0.9</span>
         </div>
         <div class="settings-option">
           <label for="max-tokens">Máx. tokens:</label>
@@ -613,29 +725,43 @@
         </div>
       </div>
 
-      <div id="chat-box" class="chat-box">
+      <div
+        id="chat-box"
+        class="chat-box"
+        aria-live="polite"
+        aria-atomic="false"
+      >
         <div class="message system animate__animated animate__fadeIn">
           <div class="message-content">
             ¡Hola! Soy un chatbot potenciado por Google Gemini. ¿En qué puedo
             ayudarte hoy?
           </div>
+          <!-- Añadimos tiempo a mensajes iniciales si se desea -->
+          <div class="message-time" style="display: block"></div>
         </div>
       </div>
 
       <div class="input-container">
-        <input
-          type="text"
+        <!-- Cambiado a textarea para multilínea y auto-ajuste -->
+        <textarea
           id="user-input"
           class="user-input"
-          placeholder="Escribe tu mensaje..."
-        />
-        <button id="send-btn" class="send-btn">
+          placeholder="Escribe tu mensaje... (Shift+Enter para nueva línea)"
+          rows="1"
+        ></textarea>
+        <button id="send-btn" class="send-btn" aria-label="Enviar mensaje">
           <i class="fas fa-paper-plane"></i>
         </button>
       </div>
 
-      <div class="status-indicator" id="status-indicator">
-        <i class="fas fa-circle-notch fa-spin"></i> Procesando...
+      <div
+        class="status-indicator"
+        id="status-indicator"
+        role="status"
+        aria-live="assertive"
+      >
+        <i class="fas fa-circle-notch fa-spin"></i>
+        <span id="status-text">Procesando...</span>
       </div>
     </div>
 
@@ -649,20 +775,26 @@
     <script type="module">
       import { GoogleGenerativeAI } from "@google/generative-ai";
 
-      // Configuración inicial
+      // --- ¡ADVERTENCIA DE SEGURIDAD! ---
+      // ¡NO EXPONGAS TU API KEY AQUÍ EN PRODUCCIÓN!
+      // Esta clave debería estar en un backend seguro.
+      // Cualquiera puede verla en las herramientas de desarrollador del navegador.
       const API_KEY = "AIzaSyBWxRM9DJB-qzjpl741ArFJsQYR9lhE1xk";
+      // ---------------------------------
       const genAI = new GoogleGenerativeAI(API_KEY);
 
       // Estado de la aplicación
       const appState = {
-        darkMode: false,
-        isTyping: false,
+        darkMode: localStorage.getItem("darkMode") === "true",
+        isTyping: false, // Ahora indica si el bot está "pensando" antes del stream
+        isStreaming: false, // Indica si está activamente mostrando una respuesta
         currentModel: "gemini-1.5-pro-latest",
         settings: {
           temperature: 0.9,
           maxTokens: 2048,
           enableHistory: true,
         },
+        chatHistory: [], // Opcional: para guardar historial si se implementa persistencia
       };
 
       // Modelos disponibles
@@ -684,8 +816,10 @@
 
       // Elementos del DOM
       const DOM = {
+        body: document.body,
+        chatContainer: document.querySelector(".chat-container"),
         chatBox: document.getElementById("chat-box"),
-        userInput: document.getElementById("user-input"),
+        userInput: document.getElementById("user-input"), // Ahora es textarea
         sendBtn: document.getElementById("send-btn"),
         darkModeBtn: document.getElementById("dark-mode-btn"),
         clearChatBtn: document.getElementById("clear-chat-btn"),
@@ -693,6 +827,7 @@
         settingsClose: document.getElementById("settings-close"),
         settingsPanel: document.getElementById("settings-panel"),
         statusIndicator: document.getElementById("status-indicator"),
+        statusText: document.getElementById("status-text"),
         modelInfo: document.getElementById("model-info"),
         modelButtons: document.querySelectorAll(".model-btn"),
         temperatureSlider: document.getElementById("temperature"),
@@ -707,6 +842,30 @@
       function checkAuth() {
         if (!localStorage.getItem("currentUser")) {
           window.location.href = "index.html";
+        } else {
+          // Opcional: Personalizar saludo
+          const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+          const firstSystemMessage = DOM.chatBox.querySelector(
+            ".message.system .message-content"
+          );
+          if (firstSystemMessage && currentUser?.username) {
+            firstSystemMessage.textContent = `¡Hola, ${currentUser.username}! Soy un chatbot potenciado por Google Gemini. ¿En qué puedo ayudarte hoy?`;
+          }
+          // Asignar hora a mensajes iniciales si se desea
+          const initialMessages = DOM.chatBox.querySelectorAll(
+            ".message:not(.user):not(.bot)"
+          );
+          initialMessages.forEach((msg) => {
+            const timeElement = msg.querySelector(".message-time");
+            if (timeElement) {
+              const now = new Date();
+              timeElement.textContent = now.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              timeElement.style.display = "block"; // Mostrar tiempo inicial
+            }
+          });
         }
       }
 
@@ -717,17 +876,27 @@
         setupEventListeners();
         updateUI();
         updateModelInfo();
+        // Opcional: Cargar historial de chat si se implementa persistencia
+        // loadChatHistory();
       }
 
       // Cargar configuración desde localStorage
       function loadSettings() {
         const savedSettings = localStorage.getItem("geminiChatSettings");
+        appState.darkMode = localStorage.getItem("darkMode") === "true"; // Asegurar carga modo oscuro
+
         if (savedSettings) {
           try {
             const settings = JSON.parse(savedSettings);
             appState.currentModel =
               settings.currentModel || "gemini-1.5-pro-latest";
-            appState.settings = { ...appState.settings, ...settings.settings };
+            // Solo sobrescribir settings si existen en el objeto guardado
+            if (settings.settings) {
+              appState.settings = {
+                ...appState.settings,
+                ...settings.settings,
+              };
+            }
 
             // Actualizar controles de UI
             DOM.temperatureSlider.value = appState.settings.temperature;
@@ -737,13 +906,14 @@
 
             // Activar el botón del modelo correcto
             DOM.modelButtons.forEach((btn) => {
-              btn.classList.toggle(
-                "active",
-                btn.dataset.model === appState.currentModel
-              );
+              const isActive = btn.dataset.model === appState.currentModel;
+              btn.classList.toggle("active", isActive);
+              btn.setAttribute("aria-pressed", isActive);
             });
           } catch (e) {
             console.error("Error loading settings:", e);
+            // Si hay error, resetear a default para evitar problemas
+            localStorage.removeItem("geminiChatSettings");
           }
         }
       }
@@ -755,15 +925,23 @@
           settings: appState.settings,
         };
         localStorage.setItem("geminiChatSettings", JSON.stringify(settings));
+        // Guardar modo oscuro por separado
+        localStorage.setItem("darkMode", appState.darkMode);
       }
 
       // Configurar event listeners
       function setupEventListeners() {
-        // Envío de mensajes
+        // Envío de mensajes (adaptado para textarea)
         DOM.sendBtn.addEventListener("click", sendMessage);
         DOM.userInput.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") sendMessage();
+          // Enviar con Enter (si no se presiona Shift)
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Evitar nueva línea por defecto
+            sendMessage();
+          }
         });
+        // Auto-ajuste de altura del textarea
+        DOM.userInput.addEventListener("input", autoResizeTextarea);
 
         // Botones de acción
         DOM.darkModeBtn.addEventListener("click", toggleDarkMode);
@@ -782,15 +960,18 @@
           DOM.temperatureValue.textContent = e.target.value;
           saveSettings();
         });
+        DOM.temperatureSlider.addEventListener("change", saveSettings); // Guardar al soltar
 
         DOM.maxTokens.addEventListener("change", (e) => {
-          appState.settings.maxTokens = parseInt(e.target.value);
+          appState.settings.maxTokens = parseInt(e.target.value) || 2048; // Valor por defecto si es inválido
+          DOM.maxTokens.value = appState.settings.maxTokens; // Asegurar que el input muestre el valor validado
           saveSettings();
         });
 
         DOM.enableHistory.addEventListener("change", (e) => {
           appState.settings.enableHistory = e.target.checked;
           saveSettings();
+          // Aquí iría lógica para borrar/guardar historial si se implementa persistencia
         });
 
         // Cerrar sesión
@@ -800,26 +981,37 @@
         DOM.deleteAccountBtn.addEventListener("click", deleteAccount);
       }
 
+      // Función para auto-ajustar textarea
+      function autoResizeTextarea() {
+        DOM.userInput.style.height = "auto"; // Resetear altura
+        DOM.userInput.style.height = DOM.userInput.scrollHeight + "px"; // Ajustar a contenido
+      }
+
       // Función para cerrar sesión
       function logoutUser() {
+        if (appState.isStreaming) return; // No permitir durante streaming
         if (confirm("¿Estás seguro de que quieres cerrar sesión?")) {
+          DOM.logoutBtn.disabled = true; // Deshabilitar botón
           localStorage.removeItem("currentUser");
+          localStorage.removeItem("geminiChatSettings"); // Opcional: borrar config al salir
+          localStorage.removeItem("darkMode");
           window.location.href = "index.html";
         }
       }
 
       // Función para borrar cuenta
       function deleteAccount() {
-        if (
-          confirm(
-            "¿Estás seguro de que quieres borrar tu cuenta? Esta acción no se puede deshacer."
-          )
-        ) {
-          const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+        if (appState.isStreaming) return; // No permitir durante streaming
+        DOM.deleteAccountBtn.disabled = true; // Deshabilitar inmediatamente
+        const confirmation = prompt(
+          "Esta acción borrará tu cuenta permanentemente y no se puede deshacer. Escribe tu nombre de usuario para confirmar:"
+        );
+        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
+        if (confirmation === currentUser?.username) {
           if (currentUser) {
             // Obtener todos los usuarios
-            const users = JSON.parse(localStorage.getItem("chatUsers") || []);
+            const users = JSON.parse(localStorage.getItem("chatUsers") || "[]");
 
             // Filtrar el usuario actual
             const updatedUsers = users.filter(
@@ -829,15 +1021,37 @@
             // Guardar los usuarios actualizados
             localStorage.setItem("chatUsers", JSON.stringify(updatedUsers));
 
-            // Eliminar el usuario actual
+            // Eliminar el usuario actual y sus settings
             localStorage.removeItem("currentUser");
+            localStorage.removeItem("geminiChatSettings");
+            localStorage.removeItem("darkMode");
+            // Opcional: Eliminar historial de chat si existe
+            // localStorage.removeItem(`chatHistory_${currentUser.username}`);
 
             // Mostrar mensaje y redirigir
-            showStatusIndicator("Cuenta eliminada correctamente", "success");
+            showStatusIndicator(
+              "Cuenta eliminada correctamente. Redirigiendo...",
+              "success"
+            );
             setTimeout(() => {
               window.location.href = "index.html";
-            }, 2000);
+            }, 2500);
+          } else {
+            showStatusIndicator(
+              "Error: No se encontró usuario actual.",
+              "error"
+            );
+            DOM.deleteAccountBtn.disabled = false; // Rehabilitar si falla
           }
+        } else if (confirmation !== null) {
+          // Si escribió algo pero no coincide
+          alert(
+            "Nombre de usuario incorrecto. La cuenta no ha sido eliminada."
+          );
+          DOM.deleteAccountBtn.disabled = false; // Rehabilitar
+        } else {
+          // Si canceló el prompt
+          DOM.deleteAccountBtn.disabled = false; // Rehabilitar
         }
       }
 
@@ -845,13 +1059,15 @@
       function updateUI() {
         // Modo oscuro/claro
         if (appState.darkMode) {
-          document.body.classList.add("dark-mode");
+          DOM.body.classList.add("dark-mode");
           DOM.darkModeBtn.innerHTML = '<i class="fas fa-sun"></i>';
           DOM.darkModeBtn.title = "Modo claro";
+          DOM.darkModeBtn.setAttribute("aria-label", "Cambiar a modo claro");
         } else {
-          document.body.classList.remove("dark-mode");
+          DOM.body.classList.remove("dark-mode");
           DOM.darkModeBtn.innerHTML = '<i class="fas fa-moon"></i>';
           DOM.darkModeBtn.title = "Modo oscuro";
+          DOM.darkModeBtn.setAttribute("aria-label", "Cambiar a modo oscuro");
         }
       }
 
@@ -863,60 +1079,95 @@
 
       // Mostrar/ocultar panel de configuración
       function toggleSettingsPanel() {
-        DOM.settingsPanel.style.display =
-          DOM.settingsPanel.style.display === "block" ? "none" : "block";
+        const isHidden =
+          DOM.settingsPanel.style.display === "none" ||
+          DOM.settingsPanel.style.display === "";
+        DOM.settingsPanel.style.display = isHidden ? "block" : "none";
+        DOM.settingsPanel.setAttribute("aria-hidden", !isHidden);
+        if (isHidden) {
+          DOM.settingsPanel.querySelector("input, button").focus(); // Foco al primer elemento
+        }
       }
 
       // Cambiar modelo de Gemini
-      function changeModel(model) {
-        appState.currentModel = model;
+      function changeModel(modelId) {
+        if (appState.isStreaming) return; // No cambiar modelo durante streaming
+
+        appState.currentModel = modelId;
         saveSettings();
 
         // Actualizar botones de modelo
         DOM.modelButtons.forEach((btn) => {
-          btn.classList.toggle("active", btn.dataset.model === model);
+          const isActive = btn.dataset.model === modelId;
+          btn.classList.toggle("active", isActive);
+          btn.setAttribute("aria-pressed", isActive);
         });
 
         updateModelInfo();
-        addSystemMessage(`Modelo cambiado a ${models[model].name}`);
+        addSystemMessage(`Modelo cambiado a ${models[modelId].name}`);
       }
 
       // Alternar modo oscuro
       function toggleDarkMode() {
         appState.darkMode = !appState.darkMode;
         updateUI();
+        saveSettings(); // Guardar preferencia de modo oscuro
       }
 
       // Limpiar el chat
       function clearChat() {
+        if (appState.isStreaming) return; // No limpiar durante streaming
         if (confirm("¿Estás seguro de que quieres limpiar el chat?")) {
-          DOM.chatBox.innerHTML = "";
+          DOM.chatBox.innerHTML = ""; // Limpia el contenido
           addSystemMessage(
             "¡Hola! Soy un chatbot potenciado por Google Gemini. ¿En qué puedo ayudarte hoy?"
           );
+          // Opcional: Limpiar historial si se implementa persistencia
+          // appState.chatHistory = [];
+          // if(appState.settings.enableHistory) {
+          //    localStorage.removeItem(`chatHistory_${JSON.parse(localStorage.getItem('currentUser')).username}`);
+          // }
         }
       }
 
       // Manejar el envío de mensajes
       function sendMessage() {
+        if (appState.isStreaming) return; // Prevenir envío durante streaming
+
         const message = DOM.userInput.value.trim();
         if (message === "") return;
 
         addMessage(message, "user");
         DOM.userInput.value = "";
+        autoResizeTextarea(); // Resetear altura del textarea
+        DOM.userInput.focus(); // Mantener foco en input
 
-        // Mostrar indicador de "escribiendo"
-        showTypingIndicator();
+        // Mostrar indicador de "escribiendo" (ahora es más un "pensando")
+        showTypingIndicator(); // O renombrar a showThinkingIndicator()
 
-        // Procesar con Gemini después de un pequeño retraso
-        setTimeout(() => {
-          processWithGemini(message);
-        }, 500);
+        // Deshabilitar input y botón mientras procesa
+        DOM.userInput.disabled = true;
+        DOM.sendBtn.disabled = true;
+
+        // Procesar con Gemini (ahora con streaming)
+        processWithGemini(message);
       }
 
-      // Procesar mensaje con Gemini
+      // *** FUNCIÓN MODIFICADA PARA STREAMING ***
       async function processWithGemini(message) {
-        showStatusIndicator("Pensando...");
+        appState.isStreaming = true; // Marcar inicio de streaming
+        showStatusIndicator("Generando respuesta..."); // Cambiar texto si se desea
+
+        // Crear el elemento del mensaje del bot ANTES de iniciar el stream
+        const botMessageElement = createMessageElement("bot", true); // true indica que está en streaming
+        const botContentElement =
+          botMessageElement.querySelector(".message-content");
+        DOM.chatBox.appendChild(botMessageElement);
+        scrollToBottom();
+
+        // Ocultar el indicador de "typing" una vez que empezamos a mostrar la respuesta
+        hideTypingIndicator();
+        let fullResponseText = ""; // Acumulador para el texto completo
 
         try {
           const model = genAI.getGenerativeModel({
@@ -927,65 +1178,143 @@
             },
           });
 
-          const result = await model.generateContent(message);
-          const response = await result.response;
-          const text = response.text();
+          const result = await model.generateContentStream(message);
 
-          hideTypingIndicator();
-          hideStatusIndicator();
-          addMessage(text, "bot");
+          // Iterar sobre los chunks del stream
+          for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            fullResponseText += chunkText;
+            botContentElement.textContent = fullResponseText; // Actualizar el contenido en tiempo real
+            scrollToBottom(); // Mantener visible el final
+          }
+
+          // --- Stream Terminado ---
+          addMessageOptions(botMessageElement, fullResponseText); // Añadir hora y botón de copia
+          botMessageElement.classList.remove("streaming"); // Quitar clase de streaming
+          botMessageElement.classList.add("streaming-finished"); // Marcar como finalizado
+
+          // Opcional: Guardar en historial si está habilitado
+          // if (appState.settings.enableHistory) {
+          //    saveToHistory({ sender: 'bot', content: fullResponseText, timestamp: Date.now() });
+          // }
         } catch (error) {
           console.error("Error al generar contenido:", error);
-          hideTypingIndicator();
+          botContentElement.textContent =
+            "Lo siento, hubo un error al procesar tu mensaje. Por favor, inténtalo de nuevo.";
+          botMessageElement.classList.add("error"); // Opcional: Clase para estilizar errores
+          addMessageOptions(botMessageElement, botContentElement.textContent); // Permitir copiar error
+          botMessageElement.classList.remove("streaming");
+          botMessageElement.classList.add("streaming-finished"); // Marcar como finalizado (aunque sea error)
+          showStatusIndicator("Error al generar respuesta", "error", 3000);
+        } finally {
+          // --- Siempre se ejecuta al final (éxito o error) ---
+          appState.isStreaming = false; // Marcar fin de streaming
           hideStatusIndicator();
-          addMessage(
-            "Lo siento, hubo un error al procesar tu mensaje. Por favor, inténtalo de nuevo.",
-            "bot"
-          );
+          // Rehabilitar input y botón
+          DOM.userInput.disabled = false;
+          DOM.sendBtn.disabled = false;
+          DOM.userInput.focus(); // Devolver foco al input
         }
       }
 
-      // Añadir mensaje al chat
-      function addMessage(content, sender) {
+      // --- Funciones Auxiliares para Mensajes ---
+
+      // Crea la estructura base de un elemento de mensaje
+      function createMessageElement(sender, isStreaming = false) {
         const messageElement = document.createElement("div");
-        messageElement.className = `message ${sender} animate__animated animate__fadeIn`;
+        // Añadir clase 'streaming' si es el caso
+        const streamingClass = isStreaming ? "streaming" : "streaming-finished";
+        messageElement.className = `message ${sender} animate__animated animate__fadeIn ${streamingClass}`;
 
         const contentElement = document.createElement("div");
         contentElement.className = "message-content";
-        contentElement.textContent = content;
+        // Dejar vacío inicialmente si es streaming, o añadir contenido si no
         messageElement.appendChild(contentElement);
+
+        // Placeholder para tiempo y opciones (se añaden después en streaming)
+        const timeElement = document.createElement("div");
+        timeElement.className = "message-time";
+        messageElement.appendChild(timeElement);
+
+        const optionsElement = document.createElement("div");
+        optionsElement.className = "message-options";
+        messageElement.appendChild(optionsElement);
+
+        return messageElement;
+      }
+
+      // Añade contenido, hora y opciones a un mensaje (usado para user y system, y al final del stream para bot)
+      function finalizeMessage(messageElement, content, sender) {
+        const contentElement = messageElement.querySelector(".message-content");
+        contentElement.textContent = content; // Asegura que el contenido final esté
 
         // Añadir hora del mensaje
         const now = new Date();
-        const timeElement = document.createElement("div");
-        timeElement.className = "message-time";
+        const timeElement = messageElement.querySelector(".message-time");
         timeElement.textContent = now.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         });
-        messageElement.appendChild(timeElement);
+        timeElement.style.display = "block"; // Mostrar hora
 
         // Añadir botón de copiar (excepto para mensajes del sistema)
         if (sender !== "system") {
-          const optionsElement = document.createElement("div");
-          optionsElement.className = "message-options";
-
-          const copyBtn = document.createElement("button");
-          copyBtn.className = "option-btn";
-          copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
-          copyBtn.title = "Copiar mensaje";
-          copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(content);
-            showStatusIndicator("¡Mensaje copiado!", "success");
-            setTimeout(hideStatusIndicator, 2000);
-          });
-
-          optionsElement.appendChild(copyBtn);
-          messageElement.appendChild(optionsElement);
+          addMessageOptions(messageElement, content);
         }
 
+        // Marcar como finalizado (si no lo estaba ya)
+        messageElement.classList.remove("streaming");
+        messageElement.classList.add("streaming-finished");
+      }
+
+      // Añade opciones (copiar) a un mensaje - llamada después del stream o para mensajes de usuario/sistema
+      function addMessageOptions(messageElement, contentToCopy) {
+        const optionsElement = messageElement.querySelector(".message-options");
+        if (!optionsElement) return; // Salir si no existe
+
+        // Limpiar opciones previas si las hubiera (relevante si se re-genera)
+        optionsElement.innerHTML = "";
+
+        // Botón de Copiar
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "option-btn";
+        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+        copyBtn.title = "Copiar mensaje";
+        copyBtn.setAttribute("aria-label", "Copiar mensaje");
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation(); // Evitar que el hover del mensaje interfiera
+          navigator.clipboard
+            .writeText(contentToCopy)
+            .then(() => {
+              // Feedback visual sutil
+              copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+              setTimeout(() => {
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+              }, 1500);
+            })
+            .catch((err) => {
+              console.error("Error al copiar:", err);
+              showStatusIndicator("Error al copiar", "error", 2000);
+            });
+        });
+
+        optionsElement.appendChild(copyBtn);
+        optionsElement.style.display = "flex"; // Mostrar contenedor de opciones
+      }
+
+      // Añadir mensaje COMPLETO al chat (Usuario o Sistema)
+      function addMessage(content, sender) {
+        const messageElement = createMessageElement(sender, false); // false = no streaming
         DOM.chatBox.appendChild(messageElement);
-        DOM.chatBox.scrollTop = DOM.chatBox.scrollHeight;
+        finalizeMessage(messageElement, content, sender); // Añadir contenido, hora, opciones
+
+        // Opcional: Guardar en historial si está habilitado
+        // if (appState.settings.enableHistory && sender !== 'system') {
+        //    saveToHistory({ sender, content, timestamp: Date.now() });
+        // }
+
+        scrollToBottom();
+        return messageElement; // Devolver el elemento por si se necesita
       }
 
       // Añadir mensaje del sistema
@@ -993,13 +1322,19 @@
         return addMessage(content, "system");
       }
 
-      // Mostrar indicador de "escribiendo"
+      // Mostrar indicador de "escribiendo/pensando"
       function showTypingIndicator() {
-        if (appState.isTyping) return;
+        if (appState.isTyping) return; // Ya está visible
 
         appState.isTyping = true;
+        const existingIndicator = document.getElementById("typing-indicator");
+        if (existingIndicator) return; // Ya existe, no añadir otro
+
         const typingElement = document.createElement("div");
         typingElement.className = "typing-indicator";
+        typingElement.id = "typing-indicator"; // Asignar ID
+        typingElement.setAttribute("aria-label", "El bot está escribiendo");
+        typingElement.setAttribute("role", "status");
 
         for (let i = 0; i < 3; i++) {
           const dot = document.createElement("div");
@@ -1007,12 +1342,11 @@
           typingElement.appendChild(dot);
         }
 
-        typingElement.id = "typing-indicator";
         DOM.chatBox.appendChild(typingElement);
-        DOM.chatBox.scrollTop = DOM.chatBox.scrollHeight;
+        scrollToBottom();
       }
 
-      // Ocultar indicador de "escribiendo"
+      // Ocultar indicador de "escribiendo/pensando"
       function hideTypingIndicator() {
         appState.isTyping = false;
         const typingElement = document.getElementById("typing-indicator");
@@ -1021,27 +1355,45 @@
         }
       }
 
-      // Mostrar indicador de estado
-      function showStatusIndicator(text, type = "info") {
-        let icon;
+      // Mostrar indicador de estado general
+      function showStatusIndicator(text, type = "info", duration = null) {
+        let iconClass;
         switch (type) {
           case "success":
-            icon = '<i class="fas fa-check-circle"></i>';
+            iconClass = "fas fa-check-circle";
+            DOM.statusIndicator.style.backgroundColor = "var(--success-color)";
             break;
           case "error":
-            icon = '<i class="fas fa-exclamation-circle"></i>';
+            iconClass = "fas fa-exclamation-circle";
+            DOM.statusIndicator.style.backgroundColor = "var(--error-color)";
             break;
-          default:
-            icon = '<i class="fas fa-circle-notch fa-spin"></i>';
+          case "warning":
+            iconClass = "fas fa-exclamation-triangle";
+            DOM.statusIndicator.style.backgroundColor = "var(--warning-color)";
+            break;
+          default: // info o procesando
+            iconClass = "fas fa-circle-notch fa-spin";
+            DOM.statusIndicator.style.backgroundColor = "rgba(0, 0, 0, 0.7)"; // Default background
         }
 
-        DOM.statusIndicator.innerHTML = `${icon} ${text}`;
+        DOM.statusIndicator.querySelector("i").className = iconClass; // Actualizar icono
+        DOM.statusText.textContent = text; // Actualizar texto
         DOM.statusIndicator.style.display = "flex";
+
+        // Ocultar automáticamente después de una duración si se especifica
+        if (duration) {
+          setTimeout(hideStatusIndicator, duration);
+        }
       }
 
-      // Ocultar indicador de estado
+      // Ocultar indicador de estado general
       function hideStatusIndicator() {
         DOM.statusIndicator.style.display = "none";
+      }
+
+      // Desplazar chat al fondo
+      function scrollToBottom() {
+        DOM.chatBox.scrollTop = DOM.chatBox.scrollHeight;
       }
 
       // Mostrar información del modelo al pasar el ratón
@@ -1050,11 +1402,13 @@
           const model = models[btn.dataset.model];
           DOM.modelInfo.textContent = `${model.name}: ${model.description}`;
           DOM.modelInfo.style.display = "block";
+          DOM.modelInfo.setAttribute("aria-hidden", "false");
         });
 
         btn.addEventListener("mouseleave", () => {
           DOM.modelInfo.style.display = "none";
-          updateModelInfo();
+          DOM.modelInfo.setAttribute("aria-hidden", "true");
+          // No es necesario llamar a updateModelInfo aquí, ya que el texto se restaura implícitamente la próxima vez que se cambie el modelo o se recargue.
         });
       });
 
